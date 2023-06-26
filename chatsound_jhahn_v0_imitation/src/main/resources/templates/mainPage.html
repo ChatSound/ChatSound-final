@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> <!-- Add jQuery -->
+</head>
+<body>
+<div class="chat-container">
+    <h1 class="chat-title">ChatSound</h1>
+    <div class="chat-main">
+        <div class="chat-content">
+            <div id="chat-window">
+                <!-- Messages will be added here -->
+            </div>
+
+            <div id="language-selection">
+                <label>
+                    <input type="radio" name="language" value="ko" checked> 한국어
+                </label>
+                <label>
+                    <input type="radio" name="language" value="en"> 영어
+                </label>
+                <label>
+                    <input type="radio" name="language" value="japanese"> 일본어
+                </label>
+                <label>
+                    <input type="radio" name="language" value="de"> 독일어
+                </label>
+                <label>
+                    <input type="radio" name="language" value="fr"> 프랑스어
+                </label>
+            </div>
+            <input type="text" id="user-input" placeholder="Type your message here...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        var idCounter = 0;  // Use this to give each audio element and its delete button a unique id
+        $("#send-button").click(function (e) {
+            e.preventDefault(); // Prevent the form from being submitted
+            var message = $("#user-input").val();
+            var language = $("input[name='language']:checked").val();
+
+            $.ajax({
+                url: "/chat", // The URL where you want to post the data
+                type: "POST", // The type of HTTP method (post, get, etc)
+                contentType: "application/json",
+                dataType: "json",
+                data: JSON.stringify({message: message, language: language}), // The data you're sending
+                success: function (response) {
+                    console.log(response); // Log the response from the server
+
+                    var soundUrl = response['sound'];
+                    var base64Audio = response['sound'];
+                    var audioElement = $('<audio>').attr('src', 'data:audio/wav;base64,' + base64Audio).attr('id', 'audio-' + idCounter).attr('controls', 'controls');
+
+                    var deleteButton = $('<button>Delete</button>').attr('id', 'delete-' + idCounter).attr('data-audio-id', 'audio-' + idCounter);
+                    var messageElement = $('<p>').text(message).attr('id', 'message-' + idCounter); // Creates a new paragraph element for the message
+
+                    // Create the "Play" button for the audio element
+                    var playButton = $('<button>Play</button>').attr('id', 'play-' + idCounter).attr('data-audio-id', 'audio-' + idCounter);
+                    playButton.click(function (e) {
+                        var audioId = $(this).attr('data-audio-id');
+                        var audio = $('#' + audioId)[0];
+                        if (audio.paused) {
+                            audio.play(); // Play the associated audio
+                            $(this).text('Pause'); // Change the button text to "Pause"
+                        } else {
+                            audio.pause(); // Pause the associated audio
+                            $(this).text('Play'); // Change the button text back to "Play"
+                        }
+                    });
+
+                    deleteButton.click(function (e) {
+                        var audioId = $(this).attr('data-audio-id');
+                        $('#' + audioId).remove();
+                        $('#message-' + audioId.replace('audio-', '')).remove(); // Remove the associated message
+                        $(this).remove();  // Also remove the delete button itself
+                        $('#play-' + audioId.replace('audio-', '')).remove(); // Remove the associated play button
+                    });
+
+                    $('#chat-window').append(messageElement).append(audioElement).append(playButton).append(deleteButton); // Append the message, audio element, play button, and delete button to the chat window
+
+                    idCounter++;  // Increase the idCounter for the next audio element and delete button
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(textStatus, errorThrown); // Log any error during the AJAX call
+                }
+            });
+
+            // Clear the message input field
+            $("#user-input").val("");
+        });
+    });
+
+    console.log(soundUrl); // 파일 URL 확인
+
+</script>
+
+</body>
+</html>
